@@ -1,0 +1,28 @@
+{
+  "name": "mdedit",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@milkdown/crepe": "^7.5.0",
+    "@milkdown/kit": "^7.5.0",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "sortablejs": "^1.15.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/sortablejs": "^1.15.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0"
+  }
+}

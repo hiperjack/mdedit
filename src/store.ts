@@ -1,0 +1,146 @@
+export type Tab = {
+  id: string;
+  filePath: string | null;
+  /** ディスク上の生のmarkdown。findByPath時の外部変更検知に使う。 */
+  diskContent: string;
+  /** 編集が発生したか。エディタ層がmarkdownUpdatedで更新する。 */
+  dirty: boolean;
+};
+
+export type AppState = {
+  tabs: Tab[];
+  activeTabId: string | null;
+};
+
+type Listener = (state: AppState) => void;
+
+function genId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+const state: AppState = {
+  tabs: [],
+  activeTabId: null,
+};
+
+const listeners = new Set<Listener>();
+
+function notify(): void {
+  for (const fn of listeners) fn(state);
+}
+
+function findIndex(tabId: string): number {
+  return state.tabs.findIndex((t) => t.id === tabId);
+}
+
+export const store = {
+  getState(): AppState {
+    return state;
+  },
+
+  getActive(): Tab | null {
+    if (!state.activeTabId) return null;
+    return state.tabs.find((t) => t.id === state.activeTabId) ?? null;
+  },
+
+  isDirty(tabId: string): boolean {
+    const tab = state.tabs.find((t) => t.id === tabId);
+    return !!tab?.dirty;
+  },
+
+  hasAnyDirty(): boolean {
+    return state.tabs.some((t) => t.dirty);
+  },
+
+  findByPath(path: string): Tab | null {
+    return state.tabs.find((t) => t.filePath === path) ?? null;
+  },
+
+  addTab(opts?: { filePath?: string; content?: string }): string {
+    const filePath = opts?.filePath ?? null;
+    const diskContent = opts?.content ?? "";
+    const tab: Tab = {
+      id: genId(),
+      filePath,
+      diskContent,
+      dirty: false,
+    };
+    state.tabs.push(tab);
+    state.activeTabId = tab.id;
+    notify();
+    return tab.id;
+  },
+
+  removeTab(tabId: string): void {
+    const idx = findIndex(tabId);
+    if (idx < 0) return;
+    const wasActive = state.activeTabId === tabId;
+    state.tabs.splice(idx, 1);
+
+    if (state.tabs.length === 0) {
+      const empty: Tab = {
+        id: genId(),
+        filePath: null,
+        diskContent: "",
+        dirty: false,
+      };
+      state.tabs.push(empty);
+      state.activeTabId = empty.id;
+    } else if (wasActive) {
+      const nextIdx = idx < state.tabs.length ? idx : idx - 1;
+      state.activeTabId = state.tabs[nextIdx].id;
+    }
+    notify();
+  },
+
+  setActive(tabId: string): void {
+    if (state.activeTabId === tabId) return;
+    if (findIndex(tabId) < 0) return;
+    state.activeTabId = tabId;
+    notify();
+  },
+
+  reorder(fromIndex: number, toIndex: number): void {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= state.tabs.length) return;
+    if (toIndex < 0 || toIndex >= state.tabs.length) return;
+    const [moved] = state.tabs.splice(fromIndex, 1);
+    state.tabs.splice(toIndex, 0, moved);
+    notify();
+  },
+
+  setDirty(tabId: string, dirty: boolean): void {
+    const tab = state.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    if (tab.dirty === dirty) return;
+    tab.dirty = dirty;
+    notify();
+  },
+
+  /** 保存成功後に呼ぶ。 */
+  markSaved(tabId: string, savedPath: string, savedContent: string): void {
+    const tab = state.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    tab.filePath = savedPath;
+    tab.diskContent = savedContent;
+    tab.dirty = false;
+    notify();
+  },
+
+  /** 外部からファイル内容を再ロード（重複オープンのreload用）。 */
+  setDiskContent(tabId: string, diskContent: string): void {
+    const tab = state.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    tab.diskContent = diskContent;
+    tab.dirty = false;
+    notify();
+  },
+
+  subscribe(fn: Listener): () => void {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  },
+};

@@ -1,0 +1,225 @@
+use tauri::menu::{
+    AboutMetadataBuilder, Menu, MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem,
+    Submenu, SubmenuBuilder,
+};
+use tauri::{AppHandle, Emitter, Wry};
+
+use crate::i18n;
+
+pub fn register_handlers(app: &AppHandle<Wry>) {
+    app.on_menu_event(|app, event| {
+        let id = event.id().as_ref().to_string();
+        if let Some(rest) = id.strip_prefix("recent_") {
+            if let Ok(idx) = rest.parse::<usize>() {
+                let list = crate::recent::current(app);
+                if let Some(path) = list.get(idx).cloned() {
+                    crate::startup::emit_open_file(app, path);
+                }
+            }
+            return;
+        }
+        if id.starts_with("file_") || id.starts_with("fmt_") || id.starts_with("view_") {
+            let _ = app.emit("menu-action", id);
+        }
+    });
+}
+
+pub fn set_from_recent(app: &AppHandle<Wry>, recent: &[String]) -> tauri::Result<()> {
+    let visible = crate::recent::is_visible(app);
+    let effective: &[String] = if visible { recent } else { &[] };
+    let menu = build_menu(app, effective)?;
+    app.set_menu(menu)?;
+    Ok(())
+}
+
+pub fn rebuild(app: &AppHandle<Wry>) -> tauri::Result<()> {
+    let recent = crate::recent::current(app);
+    set_from_recent(app, &recent)
+}
+
+fn basename(path: &str) -> String {
+    std::path::Path::new(path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(path)
+        .to_string()
+}
+
+fn build_menu(app: &AppHandle<Wry>, recent: &[String]) -> tauri::Result<Menu<Wry>> {
+    let lang = i18n::current(app);
+
+    let file_new = MenuItemBuilder::with_id("file_new", i18n::t(lang, "file.new"))
+        .accelerator("Ctrl+N")
+        .build(app)?;
+    let file_open = MenuItemBuilder::with_id("file_open", i18n::t(lang, "file.open"))
+        .accelerator("Ctrl+O")
+        .build(app)?;
+    let file_save = MenuItemBuilder::with_id("file_save", i18n::t(lang, "file.save"))
+        .accelerator("Ctrl+S")
+        .build(app)?;
+    let file_save_as = MenuItemBuilder::with_id("file_save_as", i18n::t(lang, "file.save_as"))
+        .accelerator("Ctrl+Shift+S")
+        .build(app)?;
+    let file_close = MenuItemBuilder::with_id("file_close", i18n::t(lang, "file.close"))
+        .accelerator("Ctrl+W")
+        .build(app)?;
+    let quit_label = i18n::t(lang, "file.quit");
+    let quit = PredefinedMenuItem::quit(app, Some(quit_label.as_str()))?;
+
+    let recent_main: Vec<MenuItem<Wry>> = recent
+        .iter()
+        .take(5)
+        .enumerate()
+        .map(|(i, p)| {
+            MenuItemBuilder::with_id(format!("recent_{}", i), basename(p)).build(app)
+        })
+        .collect::<tauri::Result<Vec<_>>>()?;
+
+    let recent_extra: Vec<MenuItem<Wry>> = recent
+        .iter()
+        .enumerate()
+        .skip(5)
+        .map(|(i, p)| {
+            MenuItemBuilder::with_id(format!("recent_{}", i), basename(p)).build(app)
+        })
+        .collect::<tauri::Result<Vec<_>>>()?;
+
+    let history_submenu: Option<Submenu<Wry>> = if recent_extra.is_empty() {
+        None
+    } else {
+        let mut sb = SubmenuBuilder::new(app, i18n::t(lang, "file.history_more"));
+        for item in &recent_extra {
+            sb = sb.item(item);
+        }
+        Some(sb.build()?)
+    };
+
+    let mut fb = SubmenuBuilder::new(app, i18n::t(lang, "menu.file"))
+        .item(&file_new)
+        .item(&file_open);
+    if !recent_main.is_empty() {
+        fb = fb.separator();
+        for item in &recent_main {
+            fb = fb.item(item);
+        }
+        if let Some(hs) = &history_submenu {
+            fb = fb.item(hs);
+        }
+    }
+    fb = fb
+        .separator()
+        .item(&file_save)
+        .item(&file_save_as)
+        .separator()
+        .item(&file_close)
+        .separator()
+        .item(&quit);
+    let file_menu = fb.build()?;
+
+    let edit_menu = SubmenuBuilder::new(app, i18n::t(lang, "menu.edit"))
+        .undo()
+        .redo()
+        .separator()
+        .cut()
+        .copy()
+        .paste()
+        .select_all()
+        .build()?;
+
+    let fmt_bold = MenuItemBuilder::with_id("fmt_bold", i18n::t(lang, "fmt.bold"))
+        .accelerator("Ctrl+B")
+        .build(app)?;
+    let fmt_italic = MenuItemBuilder::with_id("fmt_italic", i18n::t(lang, "fmt.italic"))
+        .accelerator("Ctrl+I")
+        .build(app)?;
+    let fmt_strike = MenuItemBuilder::with_id("fmt_strike", i18n::t(lang, "fmt.strike"))
+        .accelerator("Ctrl+Shift+X")
+        .build(app)?;
+    let fmt_code = MenuItemBuilder::with_id("fmt_code", i18n::t(lang, "fmt.code"))
+        .accelerator("Ctrl+E")
+        .build(app)?;
+    let fmt_h1 = MenuItemBuilder::with_id("fmt_h1", i18n::t(lang, "fmt.h1"))
+        .accelerator("Ctrl+Alt+1")
+        .build(app)?;
+    let fmt_h2 = MenuItemBuilder::with_id("fmt_h2", i18n::t(lang, "fmt.h2"))
+        .accelerator("Ctrl+Alt+2")
+        .build(app)?;
+    let fmt_h3 = MenuItemBuilder::with_id("fmt_h3", i18n::t(lang, "fmt.h3"))
+        .accelerator("Ctrl+Alt+3")
+        .build(app)?;
+    let fmt_quote = MenuItemBuilder::with_id("fmt_quote", i18n::t(lang, "fmt.quote")).build(app)?;
+    let fmt_bullet =
+        MenuItemBuilder::with_id("fmt_bullet", i18n::t(lang, "fmt.bullet")).build(app)?;
+    let fmt_ordered =
+        MenuItemBuilder::with_id("fmt_ordered", i18n::t(lang, "fmt.ordered")).build(app)?;
+    let fmt_codeblock =
+        MenuItemBuilder::with_id("fmt_codeblock", i18n::t(lang, "fmt.codeblock")).build(app)?;
+    let fmt_table = MenuItemBuilder::with_id("fmt_table", i18n::t(lang, "fmt.table")).build(app)?;
+    let fmt_hr = MenuItemBuilder::with_id("fmt_hr", i18n::t(lang, "fmt.hr")).build(app)?;
+    let fmt_link = MenuItemBuilder::with_id("fmt_link", i18n::t(lang, "fmt.link"))
+        .accelerator("Ctrl+K")
+        .build(app)?;
+
+    let format_menu = SubmenuBuilder::new(app, i18n::t(lang, "menu.format"))
+        .item(&fmt_bold)
+        .item(&fmt_italic)
+        .item(&fmt_strike)
+        .item(&fmt_code)
+        .separator()
+        .item(&fmt_h1)
+        .item(&fmt_h2)
+        .item(&fmt_h3)
+        .separator()
+        .item(&fmt_quote)
+        .item(&fmt_bullet)
+        .item(&fmt_ordered)
+        .item(&fmt_codeblock)
+        .item(&fmt_table)
+        .item(&fmt_hr)
+        .separator()
+        .item(&fmt_link)
+        .build()?;
+
+    let view_zoom_in = MenuItemBuilder::with_id("view_zoom_in", i18n::t(lang, "view.zoom_in"))
+        .accelerator("Ctrl+=")
+        .build(app)?;
+    let view_zoom_out = MenuItemBuilder::with_id("view_zoom_out", i18n::t(lang, "view.zoom_out"))
+        .accelerator("Ctrl+-")
+        .build(app)?;
+    let view_zoom_reset =
+        MenuItemBuilder::with_id("view_zoom_reset", i18n::t(lang, "view.zoom_reset"))
+            .accelerator("Ctrl+0")
+            .build(app)?;
+    let view_font =
+        MenuItemBuilder::with_id("view_font", i18n::t(lang, "view.settings")).build(app)?;
+
+    let view_menu = SubmenuBuilder::new(app, i18n::t(lang, "menu.view"))
+        .item(&view_zoom_in)
+        .item(&view_zoom_out)
+        .item(&view_zoom_reset)
+        .separator()
+        .item(&view_font)
+        .build()?;
+
+    let about_label = i18n::t(lang, "help.about");
+    let about = PredefinedMenuItem::about(
+        app,
+        Some(about_label.as_str()),
+        Some(
+            AboutMetadataBuilder::new()
+                .name(Some("mdedit"))
+                .version(Some("1.0.0"))
+                .build(),
+        ),
+    )?;
+
+    let help_menu = SubmenuBuilder::new(app, i18n::t(lang, "menu.help"))
+        .item(&about)
+        .build()?;
+
+    let menu = MenuBuilder::new(app)
+        .items(&[&file_menu, &edit_menu, &format_menu, &view_menu, &help_menu])
+        .build()?;
+
+    Ok(menu)
+}

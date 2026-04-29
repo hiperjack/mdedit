@@ -1,0 +1,541 @@
+:root {
+  --bg-0: #1e1e1e;
+  --bg-1: #252526;
+  --bg-2: #2d2d30;
+  --bg-3: #3a3a3d;
+  --fg-0: #e6e6e6;
+  --fg-1: #c8c8c8;
+  --fg-2: #9b9b9b;
+  --accent: #4a9eff;
+  --danger: #e85c4a;
+  --border: #3a3a3d;
+  --tab-active-bg: #1e1e1e;
+  --tab-inactive-bg: #2d2d30;
+  --tab-hover-bg: #383838;
+  /* settings.tsから上書きされる */
+  --editor-font-family:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Yu Gothic UI", Meiryo, sans-serif;
+  --editor-font-size: 15px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-0);
+  color: var(--fg-0);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", Meiryo,
+    sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── Tab bar ─────────────────────────────────── */
+#tabbar {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  height: 30px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.tab-list {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-3) transparent;
+}
+
+.tab-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tab-list::-webkit-scrollbar-thumb {
+  background: var(--bg-3);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 12px;
+  height: 30px;
+  min-width: 100px;
+  max-width: 220px;
+  background: var(--tab-inactive-bg);
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: var(--fg-1);
+}
+
+.tab:hover {
+  background: var(--tab-hover-bg);
+}
+
+.tab.active {
+  background: var(--tab-active-bg);
+  color: var(--fg-0);
+  border-bottom: 2px solid var(--accent);
+}
+
+.tab-dirty-dot {
+  color: var(--accent);
+  width: 8px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tab-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.tab-close {
+  background: transparent;
+  border: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tab-close:hover {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+
+.tab-new-btn {
+  background: transparent;
+  border: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  width: 32px;
+  height: 30px;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tab-new-btn:hover {
+  background: var(--tab-hover-bg);
+  color: var(--fg-0);
+}
+
+/* ── Toolbar ──────────────────────────────────── */
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--fg-1);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-3);
+  color: var(--fg-0);
+  border-color: var(--border);
+}
+
+.toolbar-btn:active {
+  background: var(--bg-2);
+}
+
+.toolbar-sep {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+/* ── Editor host (single pane) ───────────────── */
+#editor-host {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-pane {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#editor-pane-park {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  /* Crepe/ProseMirror の初期レイアウトに耐える程度のサイズ */
+  width: 800px;
+  height: 600px;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+#editor-pane-park .editor-pane {
+  /* park 内ではアクティブ化前の状態。ペイント不要 */
+  visibility: hidden;
+}
+
+.line-gutter {
+  position: sticky;
+  top: 0;
+  left: 0;
+  height: 0;
+  width: 44px;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--editor-font-family);
+  font-size: 12px;
+  color: var(--fg-2);
+  z-index: 1;
+}
+
+.line-gutter-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44px;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.line-no {
+  position: absolute;
+  left: 0;
+  width: 44px;
+  padding-right: 12px;
+  text-align: right;
+  box-sizing: border-box;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Crepeのデフォルトテーマを軸に微調整 */
+.milkdown {
+  height: 100%;
+}
+
+/* Crepe側のフォント変数を上書きしてBody/見出し両方に行き渡らせる */
+#editor-host .milkdown {
+  --crepe-font-default: var(--editor-font-family);
+  --crepe-font-title: var(--editor-font-family);
+}
+
+#editor-host .milkdown .ProseMirror {
+  min-height: 100%;
+  padding: 0 64px 96px;
+  outline: none;
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-font-size);
+  line-height: 1.35;
+}
+
+/*
+  Crepeは段落・見出しを絶対pxで定義しているので
+  ID付きセレクタで上書きしてemで本文サイズに連動させる
+*/
+#editor-host .milkdown .ProseMirror p {
+  font-size: 1em;
+  line-height: 1.35;
+  margin: 0.25em 0;
+}
+
+#editor-host .milkdown .ProseMirror li {
+  line-height: 1.25;
+  margin: 0;
+}
+
+#editor-host .milkdown .ProseMirror li > p {
+  margin: 0;
+  line-height: 1.25;
+}
+
+#editor-host .milkdown .ProseMirror ul,
+#editor-host .milkdown .ProseMirror ol {
+  margin: 0.2em 0;
+  padding-left: 1.5em;
+}
+
+#editor-host .milkdown .ProseMirror td,
+#editor-host .milkdown .ProseMirror th {
+  padding: 4px 8px;
+  line-height: 1.35;
+}
+
+#editor-host .milkdown .ProseMirror td > p,
+#editor-host .milkdown .ProseMirror th > p {
+  margin: 0;
+  line-height: 1.35;
+}
+#editor-host .milkdown .ProseMirror h1 { font-size: 2.4em; line-height: 1.3; }
+#editor-host .milkdown .ProseMirror h2 { font-size: 2em;   line-height: 1.3; }
+#editor-host .milkdown .ProseMirror h3 { font-size: 1.6em; line-height: 1.3; }
+#editor-host .milkdown .ProseMirror h4 { font-size: 1.4em; line-height: 1.4; }
+#editor-host .milkdown .ProseMirror h5 { font-size: 1.2em; line-height: 1.4; }
+#editor-host .milkdown .ProseMirror h6 { font-size: 1.05em; line-height: 1.4; }
+#editor-host .milkdown .ProseMirror li,
+#editor-host .milkdown .ProseMirror blockquote,
+#editor-host .milkdown .ProseMirror table {
+  font-size: 1em;
+}
+
+#editor-host .milkdown .ProseMirror pre,
+#editor-host .milkdown .ProseMirror code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .milkdown .ProseMirror {
+    padding: 0 20px 80px;
+  }
+}
+
+/* ── Modal ───────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal-dialog {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 360px;
+  max-width: 520px;
+  padding: 20px 22px 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--fg-0);
+}
+
+.modal-body {
+  font-size: 13px;
+  margin-bottom: 18px;
+  color: var(--fg-1);
+  line-height: 1.5;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--fg-0);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.modal-btn:hover {
+  background: var(--bg-3);
+}
+
+.modal-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.modal-btn-primary:hover {
+  background: #5fadff;
+}
+
+.modal-btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.modal-btn-danger:hover {
+  background: rgba(232, 92, 74, 0.12);
+}
+
+/* ── Settings modal ──────────────────────────── */
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-row > span {
+  flex: 0 0 auto;
+  color: var(--fg-1);
+  font-size: 13px;
+}
+
+.settings-input {
+  flex: 1 1 auto;
+  background: var(--bg-2);
+  color: var(--fg-0);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.settings-preview {
+  margin-top: 4px;
+  padding: 12px;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg-0);
+  line-height: 1.6;
+}
+
+/* ── Settings modal: tree layout ─────────────── */
+.settings-dialog {
+  width: 640px;
+  max-width: 90vw;
+  min-width: 520px;
+}
+
+.settings-layout {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0 18px;
+  min-height: 280px;
+}
+
+.settings-nav {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: 1px solid var(--border);
+  padding-right: 8px;
+}
+
+.settings-nav-item {
+  display: block;
+  text-align: left;
+  background: transparent;
+  color: var(--fg-1);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.settings-nav-item:hover {
+  background: var(--bg-2);
+  color: var(--fg-0);
+}
+
+.settings-nav-item.active {
+  background: var(--bg-2);
+  color: var(--fg-0);
+  border-color: var(--border);
+}
+
+.settings-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settings-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-row-checkbox {
+  justify-content: flex-start;
+}
+
+.settings-row-checkbox > .settings-input {
+  flex: 0 0 auto;
+}
+
+.settings-note {
+  color: var(--fg-2);
+  font-size: 12px;
+  line-height: 1.5;
+}

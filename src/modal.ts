@@ -1,3 +1,5 @@
+import { t } from "./i18n";
+
 type ButtonKind = "primary" | "default" | "danger";
 
 type ButtonSpec<T extends string> = {
@@ -89,12 +91,12 @@ export type SaveChoice = "save" | "discard" | "cancel";
 
 export function confirmSave(filename: string): Promise<SaveChoice> {
   return showModal<SaveChoice>({
-    title: "保存しますか？",
-    body: `${filename} には未保存の変更があります。`,
+    title: t("dlg.save.title"),
+    body: t("dlg.save.body").replace("{filename}", filename),
     buttons: [
-      { label: "保存", value: "save", kind: "primary" },
-      { label: "破棄", value: "discard", kind: "danger" },
-      { label: "キャンセル", value: "cancel" },
+      { label: t("dlg.save.save"), value: "save", kind: "primary" },
+      { label: t("dlg.save.discard"), value: "discard", kind: "danger" },
+      { label: t("dlg.save.cancel"), value: "cancel" },
     ],
     defaultValue: "cancel",
   });
@@ -104,12 +106,12 @@ export type DuplicateChoice = "switch" | "reload" | "cancel";
 
 export function confirmDuplicate(filename: string): Promise<DuplicateChoice> {
   return showModal<DuplicateChoice>({
-    title: "すでに開いています",
-    body: `${filename} はすでに開かれています。どうしますか？`,
+    title: t("dlg.dup.title"),
+    body: t("dlg.dup.body").replace("{filename}", filename),
     buttons: [
-      { label: "そのタブに切替", value: "switch", kind: "primary" },
-      { label: "破棄して開き直す", value: "reload", kind: "danger" },
-      { label: "キャンセル", value: "cancel" },
+      { label: t("dlg.dup.switch"), value: "switch", kind: "primary" },
+      { label: t("dlg.dup.reload"), value: "reload", kind: "danger" },
+      { label: t("dlg.dup.cancel"), value: "cancel" },
     ],
     defaultValue: "cancel",
   });
@@ -119,12 +121,12 @@ export type CloseAllChoice = "discard" | "cancel" | "review";
 
 export function confirmCloseAll(): Promise<CloseAllChoice> {
   return showModal<CloseAllChoice>({
-    title: "未保存の変更があります",
-    body: "未保存のタブがあります。どうしますか？",
+    title: t("dlg.closeAll.title"),
+    body: t("dlg.closeAll.body"),
     buttons: [
-      { label: "確認する", value: "review", kind: "primary" },
-      { label: "破棄して終了", value: "discard", kind: "danger" },
-      { label: "キャンセル", value: "cancel" },
+      { label: t("dlg.closeAll.review"), value: "review", kind: "primary" },
+      { label: t("dlg.closeAll.discard"), value: "discard", kind: "danger" },
+      { label: t("dlg.closeAll.cancel"), value: "cancel" },
     ],
     defaultValue: "cancel",
   });

@@ -40,9 +40,9 @@ async function bootstrap(): Promise<void> {
 
   // フォント・サイズ設定をDOMに反映
   settings.init();
-  // i18nの初期言語を設定値に同期
-  setLang(settings.get().lang);
-  settings.subscribe((s) => setLang(s.lang));
+  // i18nの初期言語を設定値（解決後の ja/en）に同期
+  setLang(settings.getEffectiveLang());
+  settings.subscribe(() => setLang(settings.getEffectiveLang()));
 
   // Ctrl+ホイール で文字サイズ変更（WebView2の標準ズームを抑止するためcapture+非passive）
   document.addEventListener(
@@ -97,10 +97,6 @@ async function bootstrap(): Promise<void> {
     },
   });
 
-  // ツールバー
-  const fmtActions = makeToolbarActions(editor);
-  createToolbar(toolbarEl, fmtActions);
-
   // ファイル系メニューアクション
   const fileActions: Record<string, () => void> = {
     file_new: () => void newTab(editor),
@@ -127,6 +123,10 @@ async function bootstrap(): Promise<void> {
     view_font: () => void openFontSettings(),
   };
 
+  // ツールバー（ファイル系・表示系もボタンに含めるためmergeしてから渡す）
+  const fmtActions = makeToolbarActions(editor);
+  createToolbar(toolbarEl, { ...fileActions, ...viewActions, ...fmtActions });
+
   setupTitle();
   setupShortcuts(editor, fileActions);
 
@@ -143,17 +143,19 @@ async function bootstrap(): Promise<void> {
       );
     };
     syncRecentVisible(settings.get().showRecent);
-    syncLang(settings.get().lang);
+    // Rust側に渡すのは解決済みの "ja"|"en"（"system" は受け取れない）
+    syncLang(settings.getEffectiveLang());
     let lastShowRecent = settings.get().showRecent;
-    let lastLang = settings.get().lang;
+    let lastEffectiveLang = settings.getEffectiveLang();
     settings.subscribe((s) => {
       if (s.showRecent !== lastShowRecent) {
         lastShowRecent = s.showRecent;
         syncRecentVisible(s.showRecent);
       }
-      if (s.lang !== lastLang) {
-        lastLang = s.lang;
-        syncLang(s.lang);
+      const eff = settings.getEffectiveLang();
+      if (eff !== lastEffectiveLang) {
+        lastEffectiveLang = eff;
+        syncLang(eff);
       }
     });
 

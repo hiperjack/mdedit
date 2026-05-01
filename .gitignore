@@ -25,6 +25,8 @@ md-editor-stage*.png
 final-*.png
 スクリーンショット*.png
 test-fixtures/
+# 動作確認用の手元 markdown / 画像はコミットしない
+test/
 
 # --- Claude Code 関連 ---
 .claude/

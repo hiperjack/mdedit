@@ -16,7 +16,53 @@
   --editor-font-family:
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     "Yu Gothic UI", Meiryo, sans-serif;
+  --editor-code-font-family:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Yu Gothic UI", Meiryo, sans-serif;
+  /* inherit = 本文色に追従。色指定があれば settings.ts が CSS color 値で上書きする。 */
+  --editor-code-color: inherit;
   --editor-font-size: 16px;
+}
+
+/* ライトテーマ。<html data-theme="light"> がついた時にだけ有効化される。 */
+:root[data-theme="light"] {
+  --bg-0: #ffffff;
+  --bg-1: #f3f3f3;
+  --bg-2: #e8e8e8;
+  --bg-3: #d4d4d4;
+  --fg-0: #1e1e1e;
+  --fg-1: #383838;
+  --fg-2: #6a6a6a;
+  --accent: #0066cc;
+  --danger: #c0392b;
+  --border: #d0d0d0;
+  --tab-active-bg: #ffffff;
+  --tab-inactive-bg: #e8e8e8;
+  --tab-hover-bg: #d4d4d4;
+}
+
+/* Crepe (frame-dark) が .milkdown 直下で設定する暗色変数を、ライト時だけ上書きする。 */
+[data-theme="light"] .milkdown {
+  --crepe-color-background: #ffffff;
+  --crepe-color-on-background: #000000;
+  --crepe-color-surface: #f7f7f7;
+  --crepe-color-surface-low: #ededed;
+  --crepe-color-on-surface: #1c1c1c;
+  --crepe-color-on-surface-variant: #4d4d4d;
+  --crepe-color-outline: #a8a8a8;
+  --crepe-color-primary: #333333;
+  --crepe-color-secondary: #cfcfcf;
+  --crepe-color-on-secondary: #000000;
+  --crepe-color-inverse: #f0f0f0;
+  --crepe-color-on-inverse: #1a1a1a;
+  --crepe-color-error: #ba1a1a;
+  --crepe-color-hover: #e0e0e0;
+  --crepe-color-selected: #d5d5d5;
+  --crepe-color-inline-area: #cacaca;
+  --crepe-shadow-1:
+    0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --crepe-shadow-2:
+    0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -199,6 +245,12 @@ body {
   flex-shrink: 0;
 }
 
+/* 右寄せボタン (設定など) を端に追いやるための伸縮スペーサ */
+.toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 /* ── Editor host (single pane) ───────────────── */
 #editor-host {
   flex: 1;
@@ -275,6 +327,8 @@ body {
 #editor-host .milkdown {
   --crepe-font-default: var(--editor-font-family);
   --crepe-font-title: var(--editor-font-family);
+  --crepe-font-code: var(--editor-code-font-family);
+  --crepe-color-inline-code: var(--editor-code-color);
 }
 
 #editor-host .milkdown .ProseMirror {
@@ -424,6 +478,22 @@ body {
 #editor-host .milkdown .ProseMirror code {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/*
+  画像ブロック (image-block) の表示は Crepe デフォルトで中央寄せだが
+  本アプリでは左寄せに統一する。キャプションの寄せも左に。
+  リサイズハンドル (left:50% + translateX(-50%)) は wrapper が fit-content の
+  幅になるため画像の真ん中に来る。
+*/
+#editor-host .milkdown .milkdown-image-block > .image-wrapper {
+  margin: 0;
+  justify-content: flex-start;
+}
+
+#editor-host .milkdown .milkdown-image-block .caption-input {
+  margin: 4px 0;
+  text-align: left;
 }
 
 @media (max-width: 720px) {
@@ -623,4 +693,37 @@ body {
   color: var(--fg-2);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.settings-color-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.settings-color-follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+
+.settings-color-input {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 24px;
+  padding: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.settings-color-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

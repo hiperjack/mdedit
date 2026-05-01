@@ -17,6 +17,7 @@
     "@milkdown/kit": "^7.5.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
+    "remark-breaks": "^4.0.0",
     "sortablejs": "^1.15.0"
   },
   "devDependencies": {

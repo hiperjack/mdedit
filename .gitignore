@@ -19,6 +19,16 @@ yarn-error.log*
 playwright-report/
 test-results/
 
+# --- 開発時のスクリーンショット・テスト fixture ---
+md-stage*.png
+md-editor-stage*.png
+final-*.png
+スクリーンショット*.png
+test-fixtures/
+
+# --- Claude Code 関連 ---
+.claude/
+
 # --- 環境変数・秘匿情報 ---
 .env
 .env.*

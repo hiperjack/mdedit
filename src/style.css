@@ -16,7 +16,7 @@
   --editor-font-family:
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     "Yu Gothic UI", Meiryo, sans-serif;
-  --editor-font-size: 15px;
+  --editor-font-size: 16px;
 }
 
 * {
@@ -283,7 +283,7 @@ body {
   outline: none;
   font-family: var(--editor-font-family);
   font-size: var(--editor-font-size);
-  line-height: 1.35;
+  line-height: 1.5;
 }
 
 /*
@@ -292,43 +292,128 @@ body {
 */
 #editor-host .milkdown .ProseMirror p {
   font-size: 1em;
-  line-height: 1.35;
-  margin: 0.25em 0;
+  line-height: 1.5;
+  /*
+    ソース上の空行 (\n\n) を「通常文字 1 行ぶん」の高さで描画するため、
+    上下 margin を line-height (1.5em) に合わせる。
+    margin collapsing で隣接段落間のギャップが 1.5em = 1 行高さになる。
+  */
+  margin: 1.5em 0;
+  /* Crepe reset.css の `padding: 4px 0` を打ち消す（margin で間隔は確保済み） */
+  padding: 0;
 }
 
 #editor-host .milkdown .ProseMirror li {
-  line-height: 1.25;
+  line-height: 1.5;
   margin: 0;
+  padding: 0.075em 0;
 }
 
-#editor-host .milkdown .ProseMirror li > p {
+/*
+  Crepe は li の中で <li><div class="children"><div class="content-dom"><p>… のように
+  深くネストするため、子セレクタ (li > p) ではマッチしない。子孫で潰す。
+*/
+#editor-host .milkdown .ProseMirror li p {
   margin: 0;
-  line-height: 1.25;
+  line-height: 1.5;
 }
 
 #editor-host .milkdown .ProseMirror ul,
 #editor-host .milkdown .ProseMirror ol {
-  margin: 0.2em 0;
-  padding-left: 1.5em;
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+/*
+  Crepe既定の .label-wrapper は height: 32px 固定で、liのline-heightや
+  marginを詰めても、この32pxが項目高の下限となって間延びの原因になる。
+  本文行送り(1.5em)に合わせて圧縮する。
+  さらに line-height の上半分 leading (~0.25em) ぶん下にずらして、
+  本文1行目のグリフ中心とラベル(bullet/number/checkbox) 中心を揃える。
+*/
+#editor-host .milkdown .milkdown-list-item-block li .label-wrapper {
+  height: 1.5em;
+  transform: translateY(0.25em);
+}
+
+#editor-host .milkdown .milkdown-list-item-block li .label-wrapper .label {
+  height: 1.5em;
+  padding: 0;
+}
+
+/*
+  Crepeの bullet/checkbox SVG アイコンは 24x24 固定で本文 (15-16px) より大きい。
+  本文の文字サイズに揃える。
+*/
+#editor-host .milkdown .milkdown-list-item-block li .label-wrapper svg {
+  width: 1em;
+  height: 1em;
 }
 
 #editor-host .milkdown .ProseMirror td,
 #editor-host .milkdown .ProseMirror th {
   padding: 4px 8px;
-  line-height: 1.35;
+  line-height: 1.5;
 }
 
 #editor-host .milkdown .ProseMirror td > p,
 #editor-host .milkdown .ProseMirror th > p {
   margin: 0;
-  line-height: 1.35;
+  line-height: 1.5;
 }
-#editor-host .milkdown .ProseMirror h1 { font-size: 2.4em; line-height: 1.3; }
-#editor-host .milkdown .ProseMirror h2 { font-size: 2em;   line-height: 1.3; }
-#editor-host .milkdown .ProseMirror h3 { font-size: 1.6em; line-height: 1.3; }
-#editor-host .milkdown .ProseMirror h4 { font-size: 1.4em; line-height: 1.4; }
-#editor-host .milkdown .ProseMirror h5 { font-size: 1.2em; line-height: 1.4; }
-#editor-host .milkdown .ProseMirror h6 { font-size: 1.05em; line-height: 1.4; }
+/*
+  コードブロックとテーブルの上下 margin を本文と揃える (1.5em)。
+  Crepe 既定は code 4px、table 0 と狭く、前後の空行が「1 行分の高さ」に
+  ならず番号がブロック端と被って見える。本文段落と同じ間隔にする。
+*/
+#editor-host .milkdown .ProseMirror .milkdown-code-block,
+#editor-host .milkdown .ProseMirror table {
+  margin: 1.5em 0;
+}
+
+/*
+  hr (---) を本文 1 行高さ (1.5em) に揃える。Crepe 既定は 13px と狭く、
+  前後の空行と並ぶと「区切り線だけ短い」見え方になる。
+  ブロック自体を 1.5em 高さにし、中央に 1px の罫線を描く。
+*/
+#editor-host .milkdown .ProseMirror hr {
+  height: 1.5em;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  position: relative;
+}
+
+#editor-host .milkdown .ProseMirror hr::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--crepe-color-outline, var(--border)), transparent 60%);
+}
+
+/*
+  見出しは Obsidian Default に倣い、サイズ・weight・line-height を h ごとに個別指定。
+  margin は共通 (1rem 0)。
+*/
+#editor-host .milkdown .ProseMirror h1,
+#editor-host .milkdown .ProseMirror h2,
+#editor-host .milkdown .ProseMirror h3,
+#editor-host .milkdown .ProseMirror h4,
+#editor-host .milkdown .ProseMirror h5,
+#editor-host .milkdown .ProseMirror h6 {
+  margin: 1rem 0;
+}
+
+#editor-host .milkdown .ProseMirror h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; }
+#editor-host .milkdown .ProseMirror h2 { font-size: 1.6em;  font-weight: 600; line-height: 1.2; }
+#editor-host .milkdown .ProseMirror h3 { font-size: 1.37em; font-weight: 600; line-height: 1.3; }
+#editor-host .milkdown .ProseMirror h4 { font-size: 1.25em; font-weight: 600; line-height: 1.4; }
+#editor-host .milkdown .ProseMirror h5 { font-size: 1.12em; font-weight: 600; line-height: 1.5; }
+#editor-host .milkdown .ProseMirror h6 { font-size: 1.12em; font-weight: 600; line-height: 1.5; }
 #editor-host .milkdown .ProseMirror li,
 #editor-host .milkdown .ProseMirror blockquote,
 #editor-host .milkdown .ProseMirror table {
@@ -465,7 +550,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--fg-0);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 /* ── Settings modal: tree layout ─────────────── */
